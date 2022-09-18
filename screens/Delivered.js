@@ -1,3 +1,10 @@
+/**
+ * Abgabe Bachelorarbeit
+ * Author: Amadou Oury Sow
+ * Date: 15.09.2022
+ * 
+ * Hier wird gelieferte bestellungen
+ */
 import {  FlatList, View, SafeAreaView } from 'react-native'
 import React, {useEffect, useState} from 'react'
 

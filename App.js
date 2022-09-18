@@ -1,3 +1,12 @@
+/**
+ * Abgabe Bachelorarbeit
+ * Author: Amadou Oury Sow
+ * Date: 15.09.2022
+ * 
+ * Die App.js ist die erste Komponent, die bei der Ausführung aufgerufen wird.
+ * Mit Hilfe von Redux, fügen wir under store hier hinzu, damit überall im Projekt auf den Store zugegriffen werden kann
+ * Nur die Home Seite wird hier aufgerufen
+ */
 import 'react-native-gesture-handler';
 import React from 'react';
 import { SafeAreaView } from 'react-native';

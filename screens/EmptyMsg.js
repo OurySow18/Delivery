@@ -1,3 +1,10 @@
+/**
+ * Abgabe Bachelorarbeit
+ * Author: Amadou Oury Sow
+ * Date: 15.09.2022
+ * 
+ * Diese Seite zeigt nur eine Nachricht, die sie per props bekommt
+ */
 import React from 'react'
 import { View, StyleSheet, Text } from 'react-native' 
 

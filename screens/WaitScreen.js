@@ -1,3 +1,10 @@
+/**
+ * Abgabe Bachelorarbeit
+ * Author: Amadou Oury Sow
+ * Date: 15.09.2022
+ * 
+ * Wait Page, wird aufgerufen, wenn der Aufruf einen Befehl dauert
+ */
 import React from 'react'
 import { View, StyleSheet, Text } from 'react-native'
 import { ActivityIndicator } from 'react-native-paper'

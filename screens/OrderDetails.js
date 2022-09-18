@@ -1,4 +1,10 @@
- 
+ /**
+ * Abgabe Bachelorarbeit
+ * Author: Amadou Oury Sow
+ * Date: 15.09.2022
+ * 
+ * Die Details einer ausgewählte Bestellung werden hier gezeigt
+ */
 import React from 'react'
 import {
   View,

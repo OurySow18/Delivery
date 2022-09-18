@@ -1,3 +1,10 @@
+/**
+ * Abgabe Bachelorarbeit
+ * Author: Amadou Oury Sow
+ * Date: 15.09.2022
+ * 
+ * Statseite, der User darf nicht ohne eine Erfolgreiche Anmeldung
+ */
 import React, { useEffect, useLayoutEffect, useState } from "react";
 import {
   View,
