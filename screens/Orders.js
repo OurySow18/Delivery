@@ -33,7 +33,8 @@ const Orders = ({navigation}) => {
       unsub();
     };
   }, ["orders"]);
-  const orderToDisplay = data.filter( product => product.status === true && product.stock > 0)
+  const orderToDisplay = data.filter( product => product.status === true && product.payed === true)
+  console.log(orderToDisplay[1])
   if (orderToDisplay.length) {
 
   return (

@@ -7,20 +7,30 @@
  * Mit Hilfe von Redux, fügen wir under store hier hinzu, damit überall im Projekt auf den Store zugegriffen werden kann
  * Nur die Home Seite wird hier aufgerufen
  */
-import 'react-native-gesture-handler';
-import React from 'react';
+import React from "react";
+import "./firebase";
+import { NativeBaseProvider } from "native-base"; 
 import { SafeAreaView } from 'react-native';
-import { Provider } from 'react-redux';
 import store from './redux/store';
-import Home from './screens/Home';
-
-export default function App() {
+import { Provider } from 'react-redux';
+import 'react-native-gesture-handler'; 
+import Home from './screens/Home'; 
+import persistStore from "redux-persist/es/persistStore";
+import { PersistGate } from "redux-persist/integration/react";   
  
-  return (
-    <Provider store={store}>
-       <SafeAreaView style={{backgroundColor:"#eee", flex: 1}}>
-       <Home />
-       </SafeAreaView>
-    </Provider>
-  );  
+let persistor = persistStore(store); 
+
+export default function App() {  
+
+ return (
+   <Provider store={store}>      
+   <NativeBaseProvider>
+      <SafeAreaView style={{backgroundColor:"#eee", flex: 1}}>
+       <PersistGate persistor={persistor}>
+         <Home />
+      </PersistGate>
+      </SafeAreaView>
+      </NativeBaseProvider>
+   </Provider>
+ );  
 }
