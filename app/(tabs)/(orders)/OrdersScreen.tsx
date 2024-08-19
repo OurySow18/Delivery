@@ -67,7 +67,7 @@ const OrdersScreen = () => {
     try {
       const q = query(collection(db, "orders"),
                        where("payed", "==", true),
-                       where("delivered", "==", true)
+                       where("delivered", "==", false)
                       );
       const querySnapshot = await getDocs(q);
       const userOrders: OrderData[] = [];

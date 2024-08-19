@@ -1,9 +1,8 @@
 import { Tabs } from 'expo-router';
-import React from 'react';
-
 import { TabBarIcon } from '@/components/navigation/TabBarIcon';
-import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
+import { useClientOnlyValue } from '@/components/useClientOnlyValue';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -11,15 +10,38 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: false,
-      }}>
+        tabBarActiveTintColor: '#fff',
+        tabBarInactiveTintColor: 'black',
+        tabBarInactiveBackgroundColor: '#ff4f00',
+        tabBarStyle: { backgroundColor: '#ff6f00' },
+        headerTintColor: '#fff',
+        headerStyle: {
+          backgroundColor: '#ff4f00',
+        },
+        headerTitleStyle: {
+          fontWeight: 'bold',
+        },
+      }}
+    >
       <Tabs.Screen
-        name="index"
+        name="(orders)"
         options={{
-          title: 'Home',
+          title: "Monmarche",
+          headerShown: useClientOnlyValue(true, true), 
           tabBarIcon: ({ color, focused }) => (
             <TabBarIcon name={focused ? 'home' : 'home-outline'} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="Scanner"
+        options={{ 
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons
+              name="qrcode-scan"
+              size={size}
+              color={color}
+            />
           ),
         }}
       />
@@ -28,7 +50,9 @@ export default function TabLayout() {
         options={{
           title: 'Explore',
           tabBarIcon: ({ color, focused }) => (
-            <TabBarIcon name={focused ? 'code-slash' : 'code-slash-outline'} color={color} />
+            <MaterialIcons name="inventory"
+              size={focused ? 40 : 24}
+              color={color} />
           ),
         }}
       />
