@@ -8,8 +8,8 @@ import 'react-native-reanimated';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '@/firebase';
+import { onAuthStateChanged } from '@firebase/auth';
+import { getFirebaseAuth } from '@/firebase';
 
 
 export {
@@ -55,10 +55,20 @@ function RootLayoutNav() {
 
   useEffect(() => {
     // Vérifie l'état de l'utilisateur
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setIsAuth(!!user);
+    let unsubscribe = () => { };
+
+    try {
+      const auth = getFirebaseAuth();
+      unsubscribe = onAuthStateChanged(auth, (user) => {
+        setIsAuth(!!user);
+        setAuthLoaded(true);
+      });
+    } catch (error) {
+      console.error('Auth initialization failed:', error);
+      setIsAuth(false);
       setAuthLoaded(true);
-    });
+    }
+
     return () => unsubscribe(); // Nettoie l'écouteur lorsqu'il n'est plus nécessaire
   }, []);
   if (!authLoaded) {

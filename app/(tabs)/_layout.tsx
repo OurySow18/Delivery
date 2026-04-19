@@ -1,12 +1,9 @@
 import { Tabs } from 'expo-router';
 import { TabBarIcon } from '@/components/navigation/TabBarIcon';
-import { useColorScheme } from '@/hooks/useColorScheme';
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { useClientOnlyValue } from '@/components/useClientOnlyValue';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
   return (
     <Tabs
       screenOptions={{
@@ -26,16 +23,27 @@ export default function TabLayout() {
       <Tabs.Screen
         name="(orders)"
         options={{
-          title: "Monmarche",
-          headerShown: useClientOnlyValue(true, true), 
+          title: 'Livraison',
+          headerShown: useClientOnlyValue(true, true),
           tabBarIcon: ({ color, focused }) => (
             <TabBarIcon name={focused ? 'home' : 'home-outline'} color={color} />
           ),
         }}
       />
       <Tabs.Screen
+        name="collecte"
+        options={{
+          title: 'Collecte',
+          headerShown: false,
+          tabBarIcon: ({ color, focused }) => (
+            <TabBarIcon name={focused ? 'cube' : 'cube-outline'} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="Scanner"
-        options={{ 
+        options={{
+          title: 'Scanner',
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons
               name="qrcode-scan"
@@ -48,11 +56,20 @@ export default function TabLayout() {
       <Tabs.Screen
         name="explore"
         options={{
-          title: 'Explore',
+          title: 'Historique',
           tabBarIcon: ({ color, focused }) => (
             <MaterialIcons name="inventory"
               size={focused ? 40 : 24}
               color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="compte"
+        options={{
+          title: 'Compte',
+          tabBarIcon: ({ color, focused }) => (
+            <TabBarIcon name={focused ? 'person' : 'person-outline'} color={color} />
           ),
         }}
       />

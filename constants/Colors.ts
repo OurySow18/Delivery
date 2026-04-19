@@ -1,7 +1,7 @@
 const tintColorLight = '#2f95dc';
 const tintColorDark = '#fff';
 
-export default {
+const Colors = {
   light: {
     text: '#000',
     background: '#fff',
@@ -26,9 +26,12 @@ export default {
   darkText: '#333',
   lightBackground: '#f0f0f0',
   red: '#ff0004',
-  primary: '#3498db',  // Bleu
-  lightPrimary: '#85c1e9',  // Bleu clair
+  primary: '#3498db', // Bleu
+  lightPrimary: '#85c1e9', // Bleu clair
 };
+
+export default Colors;
+export { Colors };
 
 export const ColorPalette = {
   primary: '#20AB6E',
@@ -47,4 +50,4 @@ export const ColorPalette = {
   input: '#EEE9F0',
   selected: '#F7F2F9',
   dark: '#2F2D32',
-}
+};

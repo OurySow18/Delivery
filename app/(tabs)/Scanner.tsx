@@ -78,7 +78,7 @@ export default function ScannerScreen() {
 
       {scanned && scanId && (
         <View style={styles.overlayButtons}>
-          <Link href={`/${scanId}`} style={styles.detailsButton}>
+          <Link href={{ pathname: '/[objectID]', params: { objectID: scanId } }} style={styles.detailsButton}>
             <Text style={styles.detailsButtonText}>Voir les details</Text>
           </Link>
           <TouchableOpacity onPress={handleRescan} style={styles.rescanButton}>

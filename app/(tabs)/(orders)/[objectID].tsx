@@ -1,65 +1,10 @@
 import { StyleSheet, Text, View, FlatList, TouchableOpacity } from 'react-native';
 import { useEffect, useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
-import { collection, getDocs, query, where, updateDoc, doc } from 'firebase/firestore';
+import { collection, doc, getDocs, query, serverTimestamp, where, writeBatch } from '@firebase/firestore';
 import { db } from '@/firebase';
 import Checkbox from 'expo-checkbox';
-
-interface ProductData {
-    id: string;
-    objectID: string;
-    description: string;
-    img: string;
-    name: string;
-    poids: string;
-    price: string;
-    nbUnit: string;
-    priceWholesale: string;
-    category: string;
-    content: string;
-    status: boolean;
-}
-
-interface DeliverInfo {
-    name: string;
-    address: string;
-    phone: string;
-}
-
-interface CartItem {
-    productId: string;
-    name: string;
-    priceDetail: string;
-    priceBulk: string;
-    quantityDetail: number;
-    quantityBulk: number;
-    amountDetail: string;
-    amountBulk: string;
-    totalAmount: string;
-    description: string;
-    img: string;
-    poids: string;
-    nbUnit: string;
-    category: string;
-    content: string;
-    selectedOption: "details" | "bulk";
-    secondQuantity: number;
-}
-
-interface OrderData {
-    id: string;
-    userId: string;
-    orderDetails: string;
-    payed: boolean;
-    delivered: boolean;
-    orderId: string;
-    paymentMethod: string;
-    paymentType: string;
-    total: number;
-    cart?: CartItem[];
-    timeStamp?: any;
-    deliverInfos?: DeliverInfo;
-}
+import { getItemQuantityLabel, getPickupSummary, isItemPickedUp, type DeliverInfo, type OrderData } from '@/constants/OrderWorkflow';
 
 const OrderInfos = () => {
     const { objectID } = useLocalSearchParams<{ objectID: string }>();
@@ -69,11 +14,16 @@ const OrderInfos = () => {
     const [isDelivered, setIsDelivered] = useState(false)
 
     useEffect(() => {
-        if (!objectID) return;
+        if (!objectID) {
+            setLoading(false);
+            return;
+        }
         loadOrders();
     }, [objectID]);
 
     const loadOrders = async () => {
+        setLoading(true);
+        setIsDelivered(false);
         try {
             const q = query(collection(db, "orders"), where("scanNum", "==", objectID));
             const querySnapshot = await getDocs(q);
@@ -90,10 +40,16 @@ const OrderInfos = () => {
                 userOrders.push(orderData);
             });
             userOrders.sort((a, b) => (b.timeStamp?.seconds || 0) - (a.timeStamp?.seconds || 0));
+
+            if (userOrders.length > 1) {
+                console.warn(`Plusieurs commandes trouvées pour scanNum ${objectID}. La plus récente sera utilisée.`);
+            }
+
             setOrders(userOrders);
-            setLoading(false);
         } catch (error) {
             console.error("Erreur lors du chargement des commandes :", error);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -105,22 +61,43 @@ const OrderInfos = () => {
     };
 
     const allItemsChecked = () => {
-        return orders[0]?.cart?.every((item) => checkedItems[item.productId]);
+        return orders[0]?.cart?.every((item) => checkedItems[item.productId]) ?? false;
     };
 
+
     const handleValidation = async () => {
+        if (!orders.length) {
+            alert("Commande introuvable.");
+            return;
+        }
+
         if (allItemsChecked()) {
             alert("Tous les produits sont validés !");
-            if (orders.length > 0) {
-                try {
-                    const orderRef = doc(db, "orders", orders[0].id);
-                    await updateDoc(orderRef, { delivered: true });
-                    alert("La commande a été marquée comme livrée.");
-                    router.navigate('/(orders)')
-                } catch (error) {
-                    console.error("Erreur lors de la mise à jour de la commande :", error);
-                    alert("Une erreur est survenue lors de la validation de la livraison.");
-                }
+            try {
+                const latestOrder = orders[0];
+                const orderRef = doc(db, "orders", latestOrder.id);
+                const archivedOrderRef = doc(db, "archivedOrders", latestOrder.id);
+                const deliveredAt = serverTimestamp();
+                const archivedAt = serverTimestamp();
+
+                const batch = writeBatch(db);
+                batch.set(archivedOrderRef, {
+                    ...latestOrder,
+                    id: latestOrder.id,
+                    archivedOrder: true,
+                    delivered: true,
+                    deliveredAt,
+                    archivedAt,
+                    sourceOrderId: latestOrder.id,
+                });
+                batch.delete(orderRef);
+
+                await batch.commit();
+                alert("La commande a été archivée et retirée des commandes actives.");
+                router.replace('/(tabs)/(orders)');
+            } catch (error) {
+                console.error("Erreur lors de la mise à jour de la commande :", error);
+                alert("Une erreur est survenue lors de l'archivage de la commande.");
             }
         } else {
             alert("Veuillez valider tous les produits avant de soumettre la commande.");
@@ -130,10 +107,31 @@ const OrderInfos = () => {
     if (loading) {
         return <Text style={styles.loadingText}>Loading...</Text>;
     }
-    console.log(orders[0].id)
+
+    if (!orders.length) {
+        return (
+            <View style={styles.container}>
+                <Text style={styles.header}>Details Commande</Text>
+                <Text style={styles.emptyText}>Aucune commande trouvée pour ce QR code.</Text>
+            </View>
+        );
+    }
+
+    const pickupSummary = getPickupSummary(orders[0]);
+
     return (
         <View style={styles.container}>
             <Text style={styles.header}>Details Commande</Text>
+            <View style={[styles.pickupBanner, pickupSummary.readyForDelivery ? styles.pickupBannerReady : styles.pickupBannerPending]}>
+                <Text style={styles.pickupBannerTitle}>
+                    {pickupSummary.readyForDelivery ? 'Commande prête à livrer' : 'Collecte en attente'}
+                </Text>
+                <Text style={styles.pickupBannerText}>
+                    {pickupSummary.hasTrackedPickup
+                        ? `${pickupSummary.pickedUpItems}/${pickupSummary.totalItems} produits récupérés`
+                        : 'Commande legacy sans suivi de collecte'}
+                </Text>
+            </View>
             {isDelivered ? (
                 <Text style={styles.deliveredText}>Cette commande a déjà été livrée.</Text>
             ) : (
@@ -149,26 +147,31 @@ const OrderInfos = () => {
                                     color={checkedItems[item.productId] ? '#4CAF50' : undefined}
                                 />
                                 <View style={styles.textContainer}>
-                                    {item.quantityBulk > 0 && (
-                                        <Text style={[styles.itemText, styles.cartonText]}>
-                                            {item.quantityBulk} x {item.name} {item.poids} - {item.amountBulk} GNF (Carton)
-                                        </Text>
+                                    <Text style={styles.itemTitle}>{item.name}</Text>
+                                    <Text style={styles.itemText}>{getItemQuantityLabel(item)}</Text>
+                                    {!!item.vendorName && (
+                                        <Text style={styles.itemMeta}>Vendeur: {item.vendorName}</Text>
                                     )}
-                                    {item.quantityDetail > 0 && (
-                                        <Text style={[styles.itemText, styles.detailsText]}>
-                                            {item.quantityDetail} x {item.name} {item.poids} - {item.amountDetail} GNF (Détails)
-                                        </Text>
-                                    )}
+                                    <Text style={[styles.itemMeta, isItemPickedUp(item) ? styles.itemPicked : styles.itemPending]}>
+                                        {isItemPickedUp(item) ? 'Recupéré' : 'En attente de collecte'}
+                                    </Text>
                                 </View>
                             </View>
                         )}
                     />
                     <TouchableOpacity
-                        style={[styles.button, !allItemsChecked() && styles.buttonDisabled]}
+                        style={[styles.button, (!allItemsChecked() || !pickupSummary.readyForDelivery) && styles.buttonDisabled]}
                         onPress={handleValidation}
-                        disabled={!allItemsChecked()}
+                        disabled={!allItemsChecked() || !pickupSummary.readyForDelivery}
                     >
-                        <Text style={styles.buttonText}>Valider la commande</Text>
+                        <Text style={styles.buttonText}>
+                            {!pickupSummary.readyForDelivery
+                                ? "Collecte incomplète"
+                                : allItemsChecked()
+                                    ? "Valider la commande"
+                                    : "Cochez tous les produits"}
+                        </Text>
+
                     </TouchableOpacity>
                 </>
             )}
@@ -179,69 +182,106 @@ const OrderInfos = () => {
 
 const styles = StyleSheet.create({
     container: {
-      flex: 1,
-      padding: 20,
-      backgroundColor: '#F5F5F5',
+        flex: 1,
+        padding: 20,
+        backgroundColor: '#F5F5F5',
     },
     header: {
-      fontSize: 24,
-      fontWeight: 'bold',
-      marginBottom: 20,
-      color: '#333',
+        fontSize: 24,
+        fontWeight: 'bold',
+        marginBottom: 20,
+        color: '#333',
+    },
+    pickupBanner: {
+        borderRadius: 14,
+        marginBottom: 16,
+        padding: 14,
+    },
+    pickupBannerReady: {
+        backgroundColor: '#dff4e4',
+    },
+    pickupBannerPending: {
+        backgroundColor: '#fff1de',
+    },
+    pickupBannerTitle: {
+        color: '#2b2b2b',
+        fontSize: 16,
+        fontWeight: '700',
+        marginBottom: 4,
+    },
+    pickupBannerText: {
+        color: '#555',
+        fontSize: 14,
     },
     itemContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginBottom: 15,
-      backgroundColor: '#FFFFFF',
-      padding: 10,
-      borderRadius: 8,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 5,
-      elevation: 3,
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 15,
+        backgroundColor: '#FFFFFF',
+        padding: 10,
+        borderRadius: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 5,
+        elevation: 3,
     },
     textContainer: {
-      marginLeft: 10,
-      flex: 1,
+        marginLeft: 10,
+        flex: 1,
     },
     itemText: {
-      fontSize: 16,
-      color: '#555',
+        fontSize: 16,
+        color: '#555',
     },
-    cartonText: {
-      color: '#FF9800',
+    itemTitle: {
+        color: '#333',
+        fontSize: 16,
+        fontWeight: '700',
     },
-    detailsText: {
-      color: '#2196F3',
+    itemMeta: {
+        color: '#666',
+        fontSize: 13,
+        marginTop: 4,
+    },
+    itemPicked: {
+        color: '#14864d',
+    },
+    itemPending: {
+        color: '#b26a00',
     },
     button: {
-      marginTop: 20,
-      backgroundColor: '#4CAF50',
-      padding: 15,
-      borderRadius: 8,
-      alignItems: 'center',
+        marginTop: 20,
+        backgroundColor: '#4CAF50',
+        padding: 15,
+        borderRadius: 8,
+        alignItems: 'center',
     },
     buttonDisabled: {
-      backgroundColor: '#BDBDBD',
+        backgroundColor: '#BDBDBD',
     },
     buttonText: {
-      color: '#FFFFFF',
-      fontSize: 18,
-      fontWeight: 'bold',
+        color: '#FFFFFF',
+        fontSize: 18,
+        fontWeight: 'bold',
     },
     loadingText: {
-      fontSize: 18,
-      color: '#555',
-      textAlign: 'center',
-      marginTop: 20,
+        fontSize: 18,
+        color: '#555',
+        textAlign: 'center',
+        marginTop: 20,
     },
     deliveredText: {
-      fontSize: 18,
-      color: '#4CAF50',
-      textAlign: 'center',
-      marginTop: 20,
+        fontSize: 18,
+        color: '#4CAF50',
+        textAlign: 'center',
+        marginTop: 20,
     },
-  });
+    emptyText: {
+        fontSize: 16,
+        color: '#555',
+        textAlign: 'center',
+        marginTop: 20,
+    },
+});
 export default OrderInfos;

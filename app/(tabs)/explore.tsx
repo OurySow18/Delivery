@@ -1,33 +1,9 @@
-import  { useEffect, useState } from 'react';
-import { View, Text, FlatList, ActivityIndicator, StyleSheet, TextInput, Pressable } from 'react-native';
+import { useEffect, useState } from 'react';
+import { View, Text, FlatList, ActivityIndicator, StyleSheet, TextInput, Pressable, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Link, Stack } from 'expo-router'; 
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { Link, Stack } from 'expo-router';
+import { collection, getDocs, query, where, Timestamp } from '@firebase/firestore';
 import { db } from '@/firebase';
- 
-
-interface Order {
-  id: string;
-  objectID: string;
-  total: number;
-  payed: boolean;
-  deliverInfos: DeliverInfo;
-}
-
-// Définir une interface pour les données de commande
-interface CartItem {
-  name: string;
-  poids: number;
-  price: number;
-  img: string;
-  priceDetail: number;
-  amountDetail: number;
-  quantityDetail: number;
-  priceBulk: number;
-  amountBulk: number;
-  quantityBulk: number;
-  totalAmount: number;
-}
 
 interface DeliverInfo {
   name: string;
@@ -38,93 +14,112 @@ interface DeliverInfo {
 
 interface OrderData {
   id: string;
-  userId: string;
-  orderDetails: string;
+  mail_invoice: string;
   payed: boolean;
   delivered: boolean;
-  orderId: string;
   scanNum: string;
-  paymentMethod: string;
-  paymentType: string;
   total: number;
-  cart?: CartItem[];
+  deliveredAt?: any;
   timeStamp?: any;
   deliverInfos?: DeliverInfo;
 }
 
-
-
-const OrdersScreen = () => {
+const ExploreScreen = () => {
   const [orders, setOrders] = useState<OrderData[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadOrders();
+    loadDeliveredOrders();
   }, []);
 
-  const loadOrders = async () => {
+  const loadDeliveredOrders = async () => {
     try {
-      const q = query(collection(db, "orders"),
-                       where("payed", "==", true),
-                       where("delivered", "==", true)
-                      );
-      const querySnapshot = await getDocs(q);
-      const userOrders: OrderData[] = [];
-      querySnapshot.forEach((doc) => {
-        const orderData = doc.data() as OrderData;
-        orderData.id = doc.id;
-        // Initialiser deliverInfos si non défini
-        if (!orderData.deliverInfos) {
-          orderData.deliverInfos = {} as DeliverInfo;
+      setLoading(true);
+      setError(null);
+
+      const now = new Date();
+      const twoDaysAgoDate = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000);
+      const twoDaysAgo = Timestamp.fromDate(twoDaysAgoDate);
+
+      const q = query(
+        collection(db, 'archivedOrders'),
+        where('deliveredAt', '>=', twoDaysAgo)
+      );
+
+      const snapshot = await getDocs(q);
+      const result: OrderData[] = [];
+
+      snapshot.forEach((doc) => {
+        const data = doc.data() as OrderData;
+        data.id = doc.id;
+        if (!data.deliverInfos) {
+          data.deliverInfos = {} as DeliverInfo;
         }
-        userOrders.push(orderData);
-        setLoading(false);
+        result.push(data);
       });
-      // Trier les commandes par timestamp de la plus récente à la plus ancienne
-      userOrders.sort((a, b) => (b.timeStamp?.seconds || 0) - (a.timeStamp?.seconds || 0));
-      setOrders(userOrders);
-    } catch (error) {
-      console.error("Erreur lors du chargement des commandes :", error);
+
+      result.sort((a, b) => {
+        const ta = a.deliveredAt?.toDate?.().getTime?.() || a.timeStamp?.toDate?.().getTime?.() || 0;
+        const tb = b.deliveredAt?.toDate?.().getTime?.() || b.timeStamp?.toDate?.().getTime?.() || 0;
+        return tb - ta;
+      });
+
+      setOrders(result);
+    } catch (e) {
+      console.error('Erreur chargement commandes livrées :', e);
+      setError("Impossible de charger les commandes livrées.");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const filteredOrders = orders.filter(order =>
-    order?.deliverInfos?.name?.toLowerCase().includes(search.toLowerCase())
+  const normalizedSearch = search.trim().toLowerCase();
+  const filteredOrders = orders.filter((order) =>
+    (order.deliverInfos?.name ?? '').toLowerCase().includes(normalizedSearch)
   );
 
-  if (loading) {
+  if (loading && !orders.length) {
     return <ActivityIndicator size="large" color="#0000ff" />;
   }
-  
+
   return (
     <View style={styles.container}>
-      <Stack.Screen options={{ title: "Monmarche" }} />
-      <View style={styles.header}>        
-        <Text style={styles.headerTitle}>Commandes à livrer</Text>
+      <Stack.Screen options={{ title: 'Historique' }} />
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Commandes livrées (48h)</Text>
         <View style={styles.searchContainer}>
           <Ionicons name="search-outline" size={20} color="#888" />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search by customer name..."
+            placeholder="Rechercher par nom..."
             value={search}
             onChangeText={setSearch}
           />
         </View>
       </View>
 
+      {error && (
+        <Text style={{ color: 'red', textAlign: 'center', marginBottom: 10 }}>{error}</Text>
+      )}
+
       <FlatList
         data={filteredOrders}
         keyExtractor={(item) => item.id}
+        refreshControl={
+          <RefreshControl refreshing={loading} onRefresh={loadDeliveredOrders} />
+        }
         renderItem={({ item }) => (
           <View style={styles.card}>
             <Link
               key={item.id}
-              href={{ pathname: `/${item.scanNum}`, params: { id: item.id } }}
-              asChild>
+              href={{ pathname: '/[objectID]', params: { objectID: item.scanNum } }}
+              asChild
+            >
               <Pressable>
                 <View style={styles.cardContent}>
-                  <Text style={styles.orderId}>No Commande: {item.id}</Text>
+                  <Text style={styles.orderId}>Email Commande: {item.mail_invoice}</Text>
                   <Text style={styles.customerName}>Nom: {item.deliverInfos?.name}</Text>
                   <View style={styles.deliveryInfo}>
                     <Text style={styles.deliveryTitle}>Information de livraison:</Text>
@@ -133,12 +128,8 @@ const OrdersScreen = () => {
                     {item.deliverInfos?.additionalInfo && (
                       <Text style={styles.deliveryText}>Info supplémentaires: {item.deliverInfos?.additionalInfo}</Text>
                     )}
-                    <Text style={styles.payedStatus}>
-                      Payé: {item.payed ? '✅ Oui' : '❌ Non'}
-                    </Text>
-                    <Text style={styles.payedStatus}>
-                      Livré: {item.delivered ? '✅ Oui' : '❌ Non'}
-                    </Text>
+                    <Text style={styles.payedStatus}>Payé: {item.payed ? '✅ Oui' : '❌ Non'}</Text>
+                    <Text style={styles.payedStatus}>Livré: {item.delivered ? '✅ Oui' : '❌ Non'}</Text>
                     <Text style={styles.totalAmount}>Total: ${item.total?.toFixed(2)}</Text>
                   </View>
                 </View>
@@ -146,7 +137,7 @@ const OrdersScreen = () => {
             </Link>
           </View>
         )}
-        ListEmptyComponent={<Text style={styles.emptyText}>No orders found.</Text>}
+        ListEmptyComponent={<Text style={styles.emptyText}>Aucune commande livrée récemment.</Text>}
       />
     </View>
   );
@@ -162,7 +153,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   headerTitle: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: 'bold',
     marginBottom: 10,
     color: '#333',
@@ -240,10 +231,10 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 18,
-    color: '#666',
     textAlign: 'center',
+    color: '#10e82d',
     marginTop: 20,
   },
 });
 
-export default OrdersScreen;
+export default ExploreScreen;
