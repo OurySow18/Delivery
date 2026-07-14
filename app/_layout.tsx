@@ -83,6 +83,12 @@ function RootLayoutNav() {
           <Stack>
             <Stack.Screen name="index" options={{ headerShown: false }} />
             <Stack.Screen
+              name="privacy-policy"
+              options={{
+                title: 'Politique de confidentialite',
+              }}
+            />
+            <Stack.Screen
               name="login"
               options={{
                 presentation: 'modal',
@@ -101,6 +107,12 @@ function RootLayoutNav() {
         ) : (
           <Stack>
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen
+              name="privacy-policy"
+              options={{
+                title: 'Politique de confidentialite',
+              }}
+            />
           </Stack>
 
         )

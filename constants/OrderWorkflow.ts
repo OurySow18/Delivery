@@ -31,6 +31,8 @@ export interface CartItem {
   vendorAddress?: string;
   vendorPhone?: string;
   vendorNotes?: string;
+  vendorLatitude?: number;
+  vendorLongitude?: number;
   pickedUp?: boolean;
   pickedUpAt?: string;
   pickedUpByUid?: string;
@@ -89,6 +91,8 @@ export interface VendorGroup {
   vendorAddress: string;
   vendorPhone: string;
   vendorNotes: string;
+  vendorLatitude?: number;
+  vendorLongitude?: number;
   items: VendorGroupItem[];
 }
 
@@ -173,6 +177,8 @@ export const groupOrdersByVendor = (
         vendorAddress: item.vendorAddress ?? 'Adresse vendeur non renseignee',
         vendorPhone: item.vendorPhone ?? 'Telephone vendeur non renseigne',
         vendorNotes: item.vendorNotes ?? '',
+        vendorLatitude: item.vendorLatitude,
+        vendorLongitude: item.vendorLongitude,
         items: [],
       };
 

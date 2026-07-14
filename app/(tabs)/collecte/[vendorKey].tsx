@@ -4,12 +4,14 @@ import {
   Alert,
   FlatList,
   Image,
+  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
 import Checkbox from 'expo-checkbox';
+import * as Linking from 'expo-linking';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { collection, doc, onSnapshot, query, serverTimestamp, where, writeBatch } from '@firebase/firestore';
 
@@ -254,6 +256,28 @@ export default function VendorPickupDetailScreen() {
     }
   };
 
+  const handleNavigateToVendor = async () => {
+    if (
+      typeof vendorGroup?.vendorLatitude !== 'number' ||
+      typeof vendorGroup.vendorLongitude !== 'number'
+    ) {
+      Alert.alert('Itineraire indisponible', 'Les coordonnees du vendeur ne sont pas renseignees.');
+      return;
+    }
+
+    const destination = `${vendorGroup.vendorLatitude},${vendorGroup.vendorLongitude}`;
+    const navigationUrl = Platform.OS === 'ios'
+      ? `http://maps.apple.com/?daddr=${destination}&dirflg=d`
+      : `https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`;
+
+    try {
+      await Linking.openURL(navigationUrl);
+    } catch (error) {
+      console.error('Erreur lors de l ouverture de l itineraire vendeur :', error);
+      Alert.alert('Itineraire impossible', 'Aucune application de navigation ne peut ouvrir cet itineraire.');
+    }
+  };
+
   if (loading && !orders.length) {
     return (
       <View style={styles.centered}>
@@ -292,6 +316,22 @@ export default function VendorPickupDetailScreen() {
             <Text style={styles.heroTitle}>{vendorGroup.vendorName}</Text>
             <Text style={styles.heroMeta}>{vendorGroup.vendorAddress}</Text>
             <Text style={styles.heroMeta}>{vendorGroup.vendorPhone}</Text>
+            <TouchableOpacity
+              activeOpacity={0.88}
+              disabled={typeof vendorGroup.vendorLatitude !== 'number' || typeof vendorGroup.vendorLongitude !== 'number'}
+              onPress={handleNavigateToVendor}
+              style={[
+                styles.navigationButton,
+                (typeof vendorGroup.vendorLatitude !== 'number' || typeof vendorGroup.vendorLongitude !== 'number') &&
+                  styles.navigationButtonDisabled,
+              ]}
+            >
+              <Text style={styles.navigationButtonText}>
+                {typeof vendorGroup.vendorLatitude === 'number' && typeof vendorGroup.vendorLongitude === 'number'
+                  ? 'Itineraire vers le vendeur'
+                  : 'Coordonnees vendeur indisponibles'}
+              </Text>
+            </TouchableOpacity>
             <Text style={styles.heroSubtle}>
               {pendingItems} en attente, {pickedItems} deja recuperes sur {uniqueOrders} commande(s)
             </Text>
@@ -388,6 +428,22 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     marginTop: 12,
+  },
+  navigationButton: {
+    alignItems: 'center',
+    backgroundColor: '#00B761',
+    borderRadius: 12,
+    marginTop: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  navigationButtonDisabled: {
+    backgroundColor: '#667085',
+  },
+  navigationButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
   },
   emptyTitle: {
     color: '#1f2a37',
