@@ -10,7 +10,7 @@ import { TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { onAuthStateChanged, signOut } from '@firebase/auth';
 import { checkUserRole, getFirebaseAuth } from '@/firebase';
-import * as Linking from 'expo-linking';
+
 
 export {
   // Catch any errors thrown by the Layout component.
