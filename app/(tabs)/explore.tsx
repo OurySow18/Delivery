@@ -112,7 +112,7 @@ const ExploreScreen = () => {
                     )}
                     <Text style={styles.payedStatus}>Payé: {item.payed ? '✅ Oui' : '❌ Non'}</Text>
                     <Text style={styles.payedStatus}>Livré: {item.delivered ? '✅ Oui' : '❌ Non'}</Text>
-                    <Text style={styles.totalAmount}>Total: ${item.total?.toFixed(2)}</Text>
+                    <Text style={styles.totalAmount}>Total: {item.total?.toFixed(2)} GNF</Text>
                   </View>
                 </View>
               </Pressable>

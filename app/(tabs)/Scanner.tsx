@@ -34,9 +34,9 @@ export default function ScannerScreen() {
   if (!permission.granted) {
     return (
       <View style={styles.permissionContainer}>
-        <Text style={styles.permissionMessage}>We need your permission to show the camera</Text>
+        <Text style={styles.permissionMessage}>Nous avons besoin de votre autorisation pour utiliser la caméra</Text>
         <TouchableOpacity onPress={requestPermission} style={styles.permissionButton}>
-          <Text style={styles.permissionButtonText}>Grant Permission</Text>
+          <Text style={styles.permissionButtonText}>Autoriser l'accès</Text>
         </TouchableOpacity>
       </View>
     );
