@@ -1,4 +1,4 @@
-import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
+import { CameraView, CameraType, useCameraPermissions, type BarcodeScanningResult } from 'expo-camera';
 import { Link } from 'expo-router';
 import { useState, useRef, useEffect } from 'react';
 import { Animated, Button, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -42,7 +42,7 @@ export default function ScannerScreen() {
     );
   }
 
-  const handleBarCodeScanned = ({ type, data }) => {
+  const handleBarCodeScanned = ({ type, data }: BarcodeScanningResult) => {
     setScanned(true);
     setScanId(data);
 

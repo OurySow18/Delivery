@@ -11,7 +11,7 @@ import { getApp, getApps, initializeApp } from "@firebase/app";
 import '@firebase/auth';
 import { getAuth, getReactNativePersistence, initializeAuth, type Auth } from '@firebase/auth';
 import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
-import { getFirestore, initializeFirestore } from '@firebase/firestore';
+import { doc, getDoc, getFirestore, initializeFirestore } from '@firebase/firestore';
 
 
  // Packet die Zugriffsinformationen unseres Firebase-Projekts in die Variable firebaseConfig, die Daten sind für jedes Projekt unterschiedlich
@@ -77,3 +77,17 @@ import { getFirestore, initializeFirestore } from '@firebase/firestore';
   
 //export const FIREBASE_DB = getFirestore(app);
   export { db, getFirebaseAuth };
+
+  /**
+   * Les comptes livreurs/admin sont créés depuis l'admin app, jamais depuis cette app.
+   * On n'autorise l'accès qu'aux comptes ayant un document admin/{uid} ou drivers/{uid},
+   * pour ne pas laisser entrer n'importe quel compte Firebase Auth du projet partagé.
+   */
+  export const checkUserRole = async (uid: string): Promise<boolean> => {
+    const adminDocRef = doc(db, "admin", uid);
+    const driverDocRef = doc(db, "drivers", uid);
+
+    const [adminDoc, driverDoc] = await Promise.all([getDoc(adminDocRef), getDoc(driverDocRef)]);
+
+    return adminDoc.exists() || driverDoc.exists();
+  };

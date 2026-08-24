@@ -160,7 +160,7 @@ const OrdersScreen = () => {
     </View>
   );
 };
-// 1F:B6:8E:44:41:BC:F4:97:B6:74:25:92:7D:9B:F9:0C:58:EA:36:7B:15:B8:7B:C5:D5:4E:43:AD:3D:F0:69:EB
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,

@@ -8,9 +8,9 @@ import 'react-native-reanimated';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { onAuthStateChanged } from '@firebase/auth';
-import { getFirebaseAuth } from '@/firebase';
-
+import { onAuthStateChanged, signOut } from '@firebase/auth';
+import { checkUserRole, getFirebaseAuth } from '@/firebase';
+import * as Linking from 'expo-linking';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -59,7 +59,13 @@ function RootLayoutNav() {
 
     try {
       const auth = getFirebaseAuth();
-      unsubscribe = onAuthStateChanged(auth, (user) => {
+      unsubscribe = onAuthStateChanged(auth, async (user) => {
+        if (user && !(await checkUserRole(user.uid))) {
+          await signOut(auth);
+          setIsAuth(false);
+          setAuthLoaded(true);
+          return;
+        }
         setIsAuth(!!user);
         setAuthLoaded(true);
       });

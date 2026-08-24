@@ -1,28 +1,16 @@
 import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator, TextInput, TouchableOpacity } from 'react-native';
 import { useState } from 'react';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { Stack } from 'expo-router';
 import { defaultStyles } from '../constants/Styles';
-import { db, getFirebaseAuth } from '../firebase';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from '@firebase/auth';
-import { doc, getDoc, serverTimestamp, setDoc } from '@firebase/firestore';
+import { checkUserRole, getFirebaseAuth } from '../firebase';
+import { signInWithEmailAndPassword } from '@firebase/auth';
 import { router } from 'expo-router';
 import Colors from '@/constants/Colors';
 
 export default function LoginScreen() {
-  const { type } = useLocalSearchParams<{ type?: string }>();
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const isRegister = type === 'register';
-
-  const checkUserRole = async (uid: string) => {
-    const adminDocRef = doc(db, "admin", uid);
-    const driverDocRef = doc(db, "drivers", uid);
-
-    const [adminDoc, driverDoc] = await Promise.all([getDoc(adminDocRef), getDoc(driverDocRef)]);
-
-    return adminDoc.exists() || driverDoc.exists();
-  };
 
   const signIn = async () => {
     const normalizedEmail = email.trim().toLowerCase();
@@ -30,47 +18,24 @@ export default function LoginScreen() {
       alert('Please enter your email and password.');
       return;
     }
-    if (isRegister && password.length < 6) {
-      alert('Password must contain at least 6 characters.');
-      return;
-    }
 
     setLoading(true);
     try {
       const auth = getFirebaseAuth();
-      if (isRegister) {
-        const credential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
-        const user = credential.user;
+      const userCredential = await signInWithEmailAndPassword(auth, normalizedEmail, password);
+      const user = userCredential.user;
 
-        await setDoc(
-          doc(db, "drivers", user.uid),
-          {
-            uid: user.uid,
-            email: normalizedEmail,
-            role: "driver",
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-          },
-          { merge: true }
-        );
+      const hasAccess = await checkUserRole(user.uid);
 
+      if (hasAccess) {
         router.replace('/(tabs)');
       } else {
-        const userCredential = await signInWithEmailAndPassword(auth, normalizedEmail, password);
-        const user = userCredential.user;
-
-        const hasAccess = await checkUserRole(user.uid);
-
-        if (hasAccess) {
-          router.replace('/(tabs)');
-        } else {
-          alert('Access denied: You are not authorized to access this app.');
-          await auth.signOut();
-        }
+        alert('Access denied: You are not authorized to access this app.');
+        await auth.signOut();
       }
     } catch (error: any) {
       console.log(error);
-      alert((isRegister ? 'Sign up failed: ' : 'Sign in failed: ') + error.message);
+      alert('Sign in failed: ' + error.message);
     }
     setLoading(false);
   };
@@ -89,9 +54,7 @@ export default function LoginScreen() {
 
       <Stack.Screen options={{ title: "Monmarche" }} />
       
-      <Text style={styles.title}>
-        {isRegister ? 'Create Your Account' : 'Welcome Back'}
-      </Text>
+      <Text style={styles.title}>Welcome Back</Text>
 
       <View style={styles.inputContainer}>
         <TextInput
@@ -114,7 +77,7 @@ export default function LoginScreen() {
       </View>
 
       <TouchableOpacity onPress={signIn} style={styles.btnPrimary}>
-        <Text style={styles.btnPrimaryText}>{isRegister ? 'Create account' : 'Login'}</Text>
+        <Text style={styles.btnPrimaryText}>Login</Text>
       </TouchableOpacity>
     </KeyboardAvoidingView>
   );

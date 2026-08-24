@@ -4,25 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Link, Stack } from 'expo-router';
 import { collection, getDocs, query, where, Timestamp } from '@firebase/firestore';
 import { db } from '@/firebase';
-
-interface DeliverInfo {
-  name: string;
-  address: string;
-  phone: string;
-  additionalInfo: string;
-}
-
-interface OrderData {
-  id: string;
-  mail_invoice: string;
-  payed: boolean;
-  delivered: boolean;
-  scanNum: string;
-  total: number;
-  deliveredAt?: any;
-  timeStamp?: any;
-  deliverInfos?: DeliverInfo;
-}
+import type { DeliverInfo, OrderData } from '@/constants/OrderWorkflow';
 
 const ExploreScreen = () => {
   const [orders, setOrders] = useState<OrderData[]>([]);

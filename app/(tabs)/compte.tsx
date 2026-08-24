@@ -14,6 +14,7 @@ import {
 import { Stack } from 'expo-router';
 import { doc, getDoc } from '@firebase/firestore';
 import { onAuthStateChanged, signOut, type User } from '@firebase/auth';
+import QRCode from 'react-native-qrcode-svg';
 
 import { db, getFirebaseAuth } from '@/firebase';
 
@@ -28,24 +29,9 @@ interface DriverProfile {
   username?: string;
 }
 
-const createVisualCode = (value: string) =>
-  new Promise<string>((resolve) => {
-    try {
-      // qrcode-terminal is already present through Expo tooling. This is a temporary visual code,
-      // useful until a dedicated mobile QR dependency is added.
-      const QRCodeTerminal = require('qrcode-terminal');
-      QRCodeTerminal.generate(value, { small: true }, (output: string) => {
-        resolve(output.replace(/ /g, '\u00A0'));
-      });
-    } catch {
-      resolve('');
-    }
-  });
-
 export default function CompteScreen() {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<DriverProfile | null>(null);
-  const [visualCode, setVisualCode] = useState('');
   const [loading, setLoading] = useState(true);
   const [qrModalVisible, setQrModalVisible] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
@@ -57,19 +43,13 @@ export default function CompteScreen() {
 
       if (!currentUser) {
         setProfile(null);
-        setVisualCode('');
         setLoading(false);
         return;
       }
 
       try {
-        const [driverDoc, qrOutput] = await Promise.all([
-          getDoc(doc(db, 'drivers', currentUser.uid)),
-          createVisualCode(currentUser.uid),
-        ]);
-
+        const driverDoc = await getDoc(doc(db, 'drivers', currentUser.uid));
         setProfile(driverDoc.exists() ? (driverDoc.data() as DriverProfile) : null);
-        setVisualCode(qrOutput);
       } catch (error) {
         console.error('Erreur chargement compte livreur :', error);
         setProfile(null);
@@ -125,17 +105,17 @@ export default function CompteScreen() {
 
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Code vendeur</Text>
-        <TouchableOpacity activeOpacity={0.85} onPress={() => setQrModalVisible(true)}>
-          {visualCode ? (
+        {user?.uid ? (
+          <TouchableOpacity activeOpacity={0.85} onPress={() => setQrModalVisible(true)}>
             <View style={styles.qrCard}>
-              <Text style={styles.qrCode}>{visualCode}</Text>
+              <QRCode value={user.uid} size={140} backgroundColor="#111827" color="#fff" />
             </View>
-          ) : (
-            <View style={styles.fallbackCode}>
-              <Text style={styles.fallbackCodeText}>{user?.uid || 'Code indisponible'}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.fallbackCode}>
+            <Text style={styles.fallbackCodeText}>Code indisponible</Text>
+          </View>
+        )}
       </View>
 
       <TouchableOpacity
@@ -155,10 +135,10 @@ export default function CompteScreen() {
         <Pressable style={styles.modalBackdrop} onPress={() => setQrModalVisible(false)}>
           <Pressable onPress={() => {}}>
             <View style={styles.modalCard}>
-              {visualCode ? (
-                <Text style={styles.qrCodeLarge}>{visualCode}</Text>
+              {user?.uid ? (
+                <QRCode value={user.uid} size={240} backgroundColor="#111827" color="#fff" />
               ) : (
-                <Text style={styles.fallbackCodeLarge}>{user?.uid || 'Code indisponible'}</Text>
+                <Text style={styles.fallbackCodeLarge}>Code indisponible</Text>
               )}
             </View>
           </Pressable>
@@ -243,13 +223,6 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     padding: 14,
   },
-  qrCode: {
-    color: '#fff',
-    fontFamily: Platform.select({ ios: 'Courier', android: 'monospace', default: 'monospace' }),
-    fontSize: 8,
-    letterSpacing: 0,
-    lineHeight: 8,
-  },
   fallbackCode: {
     backgroundColor: '#f3f4f6',
     borderRadius: 12,
@@ -273,13 +246,6 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     maxWidth: '100%',
     padding: 20,
-  },
-  qrCodeLarge: {
-    color: '#fff',
-    fontFamily: Platform.select({ ios: 'Courier', android: 'monospace', default: 'monospace' }),
-    fontSize: 12,
-    letterSpacing: 0,
-    lineHeight: 12,
   },
   fallbackCodeLarge: {
     color: '#fff',
